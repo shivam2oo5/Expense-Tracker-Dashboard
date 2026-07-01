@@ -1,6 +1,7 @@
-# FinanceFlow — Smart Personal Finance Dashboard
+INTERN ID: CITS5278
+# Expense Tracker Dashboard
 
-FinanceFlow is a premium personal finance tracking application. It runs completely client-side in the browser, storing all data securely in local storage.
+Expense Tracker  is a premium personal finance tracking application. It runs completely client-side in the browser, storing all data securely in local storage.
 
 ## Run & Operate
 
