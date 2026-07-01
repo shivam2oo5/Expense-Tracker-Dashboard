@@ -1,0 +1,25 @@
+.fade-up { opacity:0; transform:translateY(20px); }
+.fade-in  { opacity:0; }
+
+.hover-lift { transition: transform var(--transition), box-shadow var(--transition); }
+.hover-lift:hover { transform:translateY(-2px); box-shadow:var(--shadow-card-hover); }
+
+.page-enter { animation: pageEnter .25s ease; }
+@keyframes pageEnter {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.pulse { animation: pulse 2s ease infinite; }
+@keyframes pulse {
+  0%,100% { opacity:1; }
+  50%      { opacity:.5; }
+}
+
+.counter { font-variant-numeric: tabular-nums; }
+
+/* AOS overrides */
+[data-aos] { transition-property: transform, opacity; }

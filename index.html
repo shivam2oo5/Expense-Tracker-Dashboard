@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceFlow — Smart Expense Tracker</title>
+  <meta name="description" content="Track your income, expenses, and budgets with FinanceFlow — a premium personal finance dashboard." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+  <!-- AOS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="/css/variables.css" />
+  <link rel="stylesheet" href="/css/reset.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/css/animations.css" />
+  <link rel="stylesheet" href="/css/responsive.css" />
+</head>
+<body>
+
+<script>
+  window.addEventListener('error', function(e) {
+    const div = document.createElement('div');
+    div.style.position = 'fixed';
+    div.style.top = '10px';
+    div.style.left = '10px';
+    div.style.right = '10px';
+    div.style.background = '#fee2e2';
+    div.style.color = '#991b1b';
+    div.style.border = '2px solid #ef4444';
+    div.style.padding = '15px';
+    div.style.zIndex = '999999';
+    div.style.borderRadius = '8px';
+    div.style.fontFamily = 'monospace';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.fontSize = '12px';
+    div.textContent = 'Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno + ':' + e.colno + '\n' + (e.error ? e.error.stack : '');
+    document.body.appendChild(div);
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    const div = document.createElement('div');
+    div.style.position = 'fixed';
+    div.style.top = '10px';
+    div.style.left = '10px';
+    div.style.right = '10px';
+    div.style.background = '#fee2e2';
+    div.style.color = '#991b1b';
+    div.style.border = '2px solid #ef4444';
+    div.style.padding = '15px';
+    div.style.zIndex = '999999';
+    div.style.borderRadius = '8px';
+    div.style.fontFamily = 'monospace';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.fontSize = '12px';
+    div.textContent = 'Unhandled Rejection: ' + e.reason + '\n' + (e.reason && e.reason.stack ? e.reason.stack : '');
+    document.body.appendChild(div);
+  });
+</script>
+
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Transaction Modal -->
+<div class="modal-overlay" id="tx-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Add Transaction</h2>
+      <button class="modal-close" id="modal-close" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="tx-form">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Transaction Type</label>
+          <div class="type-toggle">
+            <input type="radio" name="type" id="type-expense" value="expense" checked />
+            <label for="type-expense"><i class="fa-solid fa-arrow-trend-down"></i> Expense</label>
+            <input type="radio" name="type" id="type-income" value="income" />
+            <label for="type-income"><i class="fa-solid fa-arrow-trend-up"></i> Income</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-title-input">Title</label>
+          <input class="form-control" name="title" id="modal-title-input" type="text" placeholder="e.g. Grocery Shopping" data-testid="input-title" />
+          <span class="form-error" data-error="title"></span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="modal-amount">Amount</label>
+            <input class="form-control" name="amount" id="modal-amount" type="number" min="0.01" step="0.01" placeholder="0.00" data-testid="input-amount" />
+            <span class="form-error" data-error="amount"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modal-category">Category</label>
+            <select class="form-select" id="modal-category" name="category" data-testid="select-category">
+              <option value="">Select category</option>
+            </select>
+            <span class="form-error" data-error="category"></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-date">Date</label>
+          <input class="form-control" name="date" id="modal-date" type="date" data-testid="input-date" />
+          <span class="form-error" data-error="date"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="modal-note">Note (optional)</label>
+          <textarea class="form-control" name="note" id="modal-note" placeholder="Add a note..." rows="2" data-testid="input-note"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="modal-cancel" data-testid="button-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" data-testid="button-save"><i class="fa-solid fa-floppy-disk"></i> Save Transaction</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- App shell -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-wallet"></i></div>
+      <div class="logo-text">
+        <div class="logo-name">FinanceFlow</div>
+        <div class="logo-sub">Smart Dashboard</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Main navigation">
+      <div class="nav-section-label">Main</div>
+      <div class="nav-item active" data-page="dashboard" data-testid="nav-dashboard">
+        <i class="fa-solid fa-chart-pie"></i> Dashboard
+      </div>
+      <div class="nav-item" data-page="transactions" data-testid="nav-transactions">
+        <i class="fa-solid fa-arrow-right-arrow-left"></i> Transactions
+      </div>
+      <div class="nav-item" data-page="analytics" data-testid="nav-analytics">
+        <i class="fa-solid fa-chart-bar"></i> Analytics
+      </div>
+      <div class="nav-section-label">Finance</div>
+      <div class="nav-item" data-page="budget" data-testid="nav-budget">
+        <i class="fa-solid fa-piggy-bank"></i> Budget
+      </div>
+      <div class="nav-item" data-page="reports" data-testid="nav-reports">
+        <i class="fa-regular fa-file-lines"></i> Reports
+      </div>
+      <div class="nav-section-label">Account</div>
+      <div class="nav-item" data-page="settings" data-testid="nav-settings">
+        <i class="fa-solid fa-gear"></i> Settings
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar u-avatar">A</div>
+        <div>
+          <div class="user-name u-name">Alex</div>
+          <div class="user-plan">Personal Plan</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div id="sidebar-overlay"></div>
+
+  <!-- Main wrapper -->
+  <div id="main-wrapper">
+
+    <!-- Navbar -->
+    <header id="navbar" role="banner">
+      <button id="hamburger" aria-label="Toggle menu" data-testid="button-hamburger">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="navbar-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" id="navbar-search" placeholder="Search transactions..." aria-label="Search" data-testid="input-navbar-search" />
+      </div>
+      <div class="navbar-actions">
+        <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" data-testid="button-theme-toggle">
+          <i class="fa-solid fa-moon" id="theme-icon"></i>
+        </button>
+        <div class="navbar-user" data-testid="navbar-user">
+          <div class="n-avatar u-avatar">A</div>
+          <span class="n-name u-name">Alex</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- ── DASHBOARD ── -->
+      <section class="page active page-content" id="page-dashboard">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Dashboard</h1>
+            <p>Your financial overview at a glance.</p>
+          </div>
+          <button class="btn btn-primary" id="dash-add-btn" data-testid="button-dash-add">
+            <i class="fa-solid fa-plus"></i> Add Transaction
+          </button>
+        </div>
+
+        <div class="grid-4" style="margin-bottom:24px" id="dash-cards">
+          <div class="summary-card balance">
+            <div class="sc-top"><span class="sc-label">Total Balance</span><div class="sc-icon"><i class="fa-solid fa-wallet"></i></div></div>
+            <div class="sc-value counter" id="dash-balance" data-testid="text-dash-balance">₹0.00</div>
+            <span class="sc-badge up"><i class="fa-solid fa-arrow-trend-up"></i> All time</span>
+          </div>
+          <div class="summary-card income">
+            <div class="sc-top"><span class="sc-label">Monthly Income</span><div class="sc-icon"><i class="fa-solid fa-arrow-trend-up"></i></div></div>
+            <div class="sc-value counter" id="dash-income" data-testid="text-dash-income">₹0.00</div>
+            <span class="sc-badge up"><i class="fa-solid fa-circle-check"></i> This month</span>
+          </div>
+          <div class="summary-card expense" style = "opacity: 1">
+            <div class="sc-top"><span class="sc-label">Monthly Expenses</span><div class="sc-icon"><i class="fa-solid fa-arrow-trend-down"></i></div></div>
+            <div class="sc-value counter" id="dash-expense" data-testid="text-dash-expense">₹0.00</div>
+            <span class="sc-badge down"><i class="fa-solid fa-receipt"></i> This month</span>
+          </div>
+          <div class="summary-card savings-card">
+            <div class="sc-top"><span class="sc-label">Total Savings</span><div class="sc-icon"><i class="fa-solid fa-piggy-bank"></i></div></div>
+            <div class="sc-value counter" id="dash-savings" data-testid="text-dash-savings">₹0.00</div>
+            <span class="sc-badge neu"><i class="fa-solid fa-star"></i> Net balance</span>
+          </div>
+        </div>
+
+        <div class="grid-auto" style="margin-bottom:24px">
+          <div class="chart-card" data-aos="fade-up">
+            <div class="chart-header">
+              <div><div class="section-title">Monthly Expenses</div><div class="section-sub">Last 6 months overview</div></div>
+            </div>
+            <div class="chart-canvas-wrap" style="height:220px">
+              <canvas id="dash-trend-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card" data-aos="fade-up" data-aos-delay="60">
+            <div class="chart-header">
+              <div><div class="section-title">Budget Usage</div><div class="section-sub">Overall monthly budget</div></div>
+            </div>
+            <div style="display:flex;justify-content:center;margin:8px 0">
+              <div class="donut-wrap">
+                <canvas id="dash-budget-ring" width="160" height="160"></canvas>
+                <div class="donut-center">
+                  <div class="dc-pct" id="dash-budget-pct">0%</div>
+                  <div class="dc-sub" id="dash-budget-sub">of budget</div>
+                </div>
+              </div>
+            </div>
+            <div id="dash-budget-info" style="margin-top:12px"></div>
+          </div>
+        </div>
+
+        <div class="grid-auto-r">
+          <div class="chart-card" data-aos="fade-up">
+            <div class="chart-header">
+              <div><div class="section-title">Spending Categories</div><div class="section-sub">Top expense breakdown</div></div>
+            </div>
+            <div id="dash-cat-bars"></div>
+          </div>
+          <div class="table-container" data-aos="fade-up" data-aos-delay="60">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <div class="section-title">Recent Transactions</div>
+              <button class="btn btn-ghost btn-sm" onclick="document.querySelector('.nav-item[data-page=transactions]').click()" data-testid="link-view-all">View All</button>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>Transaction</th><th>Category</th><th>Date</th><th>Amount</th></tr></thead>
+              <tbody id="recent-tx-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── TRANSACTIONS ── -->
+      <section class="page page-content" id="page-transactions">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Transactions</h1>
+            <p>Manage and review all your financial records.</p>
+          </div>
+          <button class="btn btn-primary" id="tx-add-btn" data-testid="button-tx-add">
+            <i class="fa-solid fa-plus"></i> Add Transaction
+          </button>
+        </div>
+
+        <div class="filters-bar">
+          <div class="filter-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="tx-search" placeholder="Search transactions..." data-testid="input-tx-search" />
+          </div>
+          <div class="type-pills">
+            <button class="type-pill active" data-type="all" data-testid="pill-all">All</button>
+            <button class="type-pill" data-type="income" data-testid="pill-income">Income</button>
+            <button class="type-pill" data-type="expense" data-testid="pill-expense">Expense</button>
+          </div>
+          <select class="filter-select" id="tx-cat-filter" data-testid="select-cat-filter" style="min-width:160px">
+            <option value="all">All Categories</option>
+          </select>
+          <input type="date" class="filter-select" id="tx-date-from" style="min-width:130px" data-testid="input-date-from" />
+          <input type="date" class="filter-select" id="tx-date-to" style="min-width:130px" data-testid="input-date-to" />
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" aria-label="Transactions table">
+            <thead>
+              <tr>
+                <th>Merchant / Title</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tx-tbody"></tbody>
+          </table>
+          <div class="pagination">
+            <span id="tx-page-info" style="font-size:12px;color:var(--text-muted)"></span>
+            <div class="page-btns" id="tx-page-btns"></div>
+          </div>
+        </div>
+
+        <button class="fab" id="fab-add" aria-label="Add transaction" data-testid="button-fab-add">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </section>
+
+      <!-- ── ANALYTICS ── -->
+      <section class="page page-content" id="page-analytics">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Analytics</h1>
+            <p>Deep dive into your financial performance.</p>
+          </div>
+        </div>
+
+        <div class="grid-4" style="margin-bottom:24px">
+          <div class="card" data-aos="fade-up">
+            <div class="section-sub">Total Balance</div>
+            <div class="sc-value" id="an-balance" data-testid="text-an-balance" style="font-size:22px;margin-top:4px">-</div>
+          </div>
+          <div class="card" data-aos="fade-up" data-aos-delay="60">
+            <div class="section-sub">Total Income</div>
+            <div class="sc-value" id="an-income" data-testid="text-an-income" style="font-size:22px;color:var(--success);margin-top:4px">-</div>
+          </div>
+          <div class="card" data-aos="fade-up" data-aos-delay="120">
+            <div class="section-sub">Total Expenses</div>
+            <div class="sc-value" id="an-expense" data-testid="text-an-expense" style="font-size:22px;color:var(--danger);margin-top:4px">-</div>
+          </div>
+          <div class="card" data-aos="fade-up" data-aos-delay="180">
+            <div class="section-sub">Savings Rate</div>
+            <div class="sc-value" id="an-savings-pct" data-testid="text-an-savings-pct" style="font-size:22px;color:var(--primary);margin-top:4px">-</div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-bottom:24px" data-aos="fade-up">
+          <div class="chart-header">
+            <div><div class="section-title">Spending Trends</div><div class="section-sub">Income vs expenses — last 6 months</div></div>
+          </div>
+          <div class="chart-canvas-wrap" style="height:280px">
+            <canvas id="an-trend-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="chart-card" data-aos="fade-up">
+            <div class="chart-header">
+              <div><div class="section-title">Category Breakdown</div><div class="section-sub">Expense distribution by category</div></div>
+            </div>
+            <div class="chart-canvas-wrap" style="height:260px">
+              <canvas id="an-cat-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card" data-aos="fade-up" data-aos-delay="60">
+            <div class="chart-header">
+              <div><div class="section-title">Top Categories</div><div class="section-sub">Highest spending areas</div></div>
+            </div>
+            <div id="an-top-cats"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── BUDGET ── -->
+      <section class="page page-content" id="page-budget">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Budget Planning</h1>
+            <p>Track your spending efficiency this month.</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" class="form-control" id="bud-monthly-input" placeholder="Monthly budget" style="width:160px;height:40px" data-testid="input-monthly-budget" />
+            <button class="btn btn-primary" id="bud-save-btn" data-testid="button-save-budget">
+              <i class="fa-solid fa-floppy-disk"></i> Save
+            </button>
+          </div>
+        </div>
+
+        <div class="grid-auto" style="margin-bottom:24px">
+          <div class="chart-card" data-aos="fade-up">
+            <div class="chart-header">
+              <div><div class="section-title">Total Monthly Budget</div></div>
+            </div>
+            <div style="display:flex;justify-content:center;margin-bottom:20px">
+              <div class="donut-wrap">
+                <canvas id="bud-ring" width="180" height="180"></canvas>
+                <div class="donut-center">
+                  <div class="dc-pct" id="bud-spent-pct">0%</div>
+                  <div class="dc-sub" id="bud-spent-of">of budget</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center">
+              <div class="stat-mini"><div class="sm-label">Spent</div><div class="sm-value" id="bud-spent-val" style="font-size:15px">-</div></div>
+              <div class="stat-mini"><div class="sm-label">Daily Avg</div><div class="sm-value" id="bud-daily" style="font-size:15px">-</div></div>
+              <div class="stat-mini"><div class="sm-label">Days Left</div><div class="sm-value" id="bud-days" style="font-size:15px">-</div></div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card" style="background:var(--primary);border-color:var(--primary)" data-aos="fade-up">
+              <div style="font-size:12px;color:rgba(255,255,255,.75);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Available to Spend</div>
+              <div style="font-size:32px;font-weight:800;color:#fff" id="bud-available">-</div>
+            </div>
+            <div class="chart-card" data-aos="fade-up" data-aos-delay="60">
+              <div class="chart-header"><div><div class="section-title">Budget Alerts</div></div></div>
+              <div id="bud-alerts"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-bottom:24px" data-aos="fade-up">
+          <div class="chart-header" style="margin-bottom:20px">
+            <div><div class="section-title">Category Budgets</div><div class="section-sub">Spending per category this month</div></div>
+          </div>
+          <div class="grid-3" id="bud-cats"></div>
+        </div>
+
+        <div class="chart-card" data-aos="fade-up">
+          <div class="chart-header">
+            <div><div class="section-title">Budget Utilization History</div><div class="section-sub">Income vs actual spend — last 6 months</div></div>
+          </div>
+          <div class="chart-canvas-wrap" style="height:240px">
+            <canvas id="bud-history-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── REPORTS ── -->
+      <section class="page page-content" id="page-reports">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Reports</h1>
+            <p>Download and review your financial summaries.</p>
+          </div>
+          <button class="btn btn-primary" data-action="export-csv" data-testid="button-export-csv">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+          </button>
+        </div>
+
+        <div class="grid-4" style="margin-bottom:24px">
+          <div class="summary-card income" data-aos="fade-up">
+            <div class="sc-top"><span class="sc-label">Total Income</span><div class="sc-icon"><i class="fa-solid fa-arrow-trend-up"></i></div></div>
+            <div class="sc-value" id="rep-total-income" data-testid="text-rep-total-income">-</div>
+            <span class="sc-badge neu">All time</span>
+          </div>
+          <div class="summary-card expense" data-aos="fade-up" data-aos-delay="60">
+            <div class="sc-top"><span class="sc-label">Total Expenses</span><div class="sc-icon"><i class="fa-solid fa-arrow-trend-down"></i></div></div>
+            <div class="sc-value" id="rep-total-expense" data-testid="text-rep-total-expense">-</div>
+            <span class="sc-badge neu">All time</span>
+          </div>
+          <div class="summary-card savings-card" data-aos="fade-up" data-aos-delay="120">
+            <div class="sc-top"><span class="sc-label">Net Savings</span><div class="sc-icon"><i class="fa-solid fa-piggy-bank"></i></div></div>
+            <div class="sc-value" id="rep-net-savings" data-testid="text-rep-net-savings">-</div>
+            <span class="sc-badge up">Balance</span>
+          </div>
+          <div class="card" data-aos="fade-up" data-aos-delay="180">
+            <div class="section-sub">Total Transactions</div>
+            <div class="sc-value" id="rep-tx-count" data-testid="text-rep-tx-count" style="font-size:32px;margin-top:8px">-</div>
+            <span class="sc-badge neu" style="margin-top:6px">Recorded</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:24px" data-aos="fade-up">
+          <div class="section-title" style="margin-bottom:16px">This Month</div>
+          <div class="grid-3">
+            <div style="text-align:center;padding:16px;background:var(--success-light);border-radius:12px">
+              <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Income</div>
+              <div style="font-size:22px;font-weight:800;color:var(--success)" id="rep-m-income" data-testid="text-rep-m-income">-</div>
+            </div>
+            <div style="text-align:center;padding:16px;background:var(--danger-light);border-radius:12px">
+              <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Expenses</div>
+              <div style="font-size:22px;font-weight:800;color:var(--danger)" id="rep-m-expense" data-testid="text-rep-m-expense">-</div>
+            </div>
+            <div style="text-align:center;padding:16px;background:var(--primary-light);border-radius:12px">
+              <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Savings</div>
+              <div style="font-size:22px;font-weight:800;color:var(--primary)" id="rep-m-savings" data-testid="text-rep-m-savings">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section" data-aos="fade-up">
+          <div class="settings-section-header">
+            <h3>Export Data</h3>
+            <span class="badge badge-muted">CSV Format</span>
+          </div>
+          <div class="settings-section-body" style="padding:20px">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Download your complete transaction history. Compatible with Excel and Google Sheets.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-primary" data-action="export-csv" data-testid="button-export-csv-2">
+                <i class="fa-solid fa-download"></i> Download CSV
+              </button>
+              <button class="btn btn-ghost" style="cursor:not-allowed;opacity:.5" title="Coming soon">
+                <i class="fa-regular fa-file-pdf"></i> PDF Report (Coming Soon)
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SETTINGS ── -->
+      <section class="page page-content" id="page-settings">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Settings</h1>
+            <p>Customize your FinanceFlow experience.</p>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-bottom:20px" data-aos="fade-up">
+          <div class="settings-section-header"><h3>Profile</h3></div>
+          <div class="settings-section-body" style="padding:20px">
+            <div class="form-group" style="max-width:360px">
+              <label class="form-label" for="settings-name">Display Name</label>
+              <input class="form-control" id="settings-name" type="text" placeholder="Your name" data-testid="input-settings-name" />
+            </div>
+            <button class="btn btn-primary btn-sm" id="settings-name-save" style="margin-top:12px" data-testid="button-settings-name-save">
+              <i class="fa-solid fa-floppy-disk"></i> Save Name
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-bottom:20px" data-aos="fade-up">
+          <div class="settings-section-header"><h3>Appearance</h3></div>
+          <div class="settings-section-body">
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Dark Mode</div>
+                <div class="toggle-desc">Toggle between light and dark themes</div>
+              </div>
+              <label class="switch" aria-label="Dark mode toggle">
+                <input type="checkbox" id="settings-dark-toggle" data-testid="toggle-dark-mode" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-bottom:20px" data-aos="fade-up">
+          <div class="settings-section-header"><h3>Currency</h3></div>
+          <div class="settings-section-body" style="padding:16px 20px">
+            <div style="display:flex;flex-direction:column;gap:10px;max-width:400px">
+              <div class="currency-option active" data-currency="INR" data-testid="option-currency-inr">
+                <div class="c-sym" style="color:#059669">₹</div>
+                <div><div class="c-name">INR — Indian Rupee</div><div class="c-desc">₹ (Default)</div></div>
+                <i class="fa-solid fa-circle-check c-check"></i>
+              </div>
+              <div class="currency-option" data-currency="USD" data-testid="option-currency-usd">
+                <div class="c-sym" style="color:var(--primary)">$</div>
+                <div><div class="c-name">USD — US Dollar</div><div class="c-desc">$ (United States)</div></div>
+                <i class="fa-solid fa-circle-check c-check"></i>
+              </div>
+              <div class="currency-option" data-currency="EUR" data-testid="option-currency-eur">
+                <div class="c-sym" style="color:#2563eb">€</div>
+                <div><div class="c-name">EUR — Euro</div><div class="c-desc">€ (European Union)</div></div>
+                <i class="fa-solid fa-circle-check c-check"></i>
+              </div>
+              <div class="currency-option" data-currency="GBP" data-testid="option-currency-gbp">
+                <div class="c-sym" style="color:#7c3aed">£</div>
+                <div><div class="c-name">GBP — British Pound</div><div class="c-desc">£ (Sterling)</div></div>
+                <i class="fa-solid fa-circle-check c-check"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section" data-aos="fade-up">
+          <div class="settings-section-header">
+            <h3>Data Management</h3>
+            <span class="badge badge-danger">High Sensitivity</span>
+          </div>
+          <div class="settings-section-body" style="padding:20px">
+            <div class="grid-2" style="gap:16px">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Export Financial Data</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Download a complete archive of your transaction history.</div>
+                <button class="btn btn-ghost" data-action="export-csv" data-testid="button-settings-export">
+                  <i class="fa-solid fa-download"></i> Export CSV
+                </button>
+              </div>
+              <div style="background:var(--danger-light);border:1px solid #fca5a5;border-radius:12px;padding:16px">
+                <div style="font-size:14px;font-weight:700;color:var(--danger);margin-bottom:4px">Reset Account Data</div>
+                <div style="font-size:12px;color:#991b1b;margin-bottom:12px">Permanently delete all financial records. This cannot be undone.</div>
+                <button class="btn btn-danger btn-sm" id="settings-reset-btn" data-testid="button-settings-reset">
+                  <i class="fa-solid fa-trash"></i> Wipe Account Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px;text-align:center;padding:24px" data-aos="fade-up">
+          <div style="font-size:20px;font-weight:800;color:var(--primary);margin-bottom:4px">FinanceFlow</div>
+          <div style="font-size:12px;color:var(--text-muted)">Smart Expense Tracker — Version 1.0</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">All data stored locally in your browser. No account required.</div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer id="footer">
+      <span>FinanceFlow</span> &copy; 2024 — Smart personal finance tracking.
+    </footer>
+
+  </div>
+</div>
+
+<!-- External Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+<!-- App JS -->
+<script type="module" src="/js/app.js"></script>
+
+</body>
+</html>
