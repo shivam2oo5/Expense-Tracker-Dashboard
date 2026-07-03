@@ -1,4 +1,4 @@
-INTERN ID: CITS5278
+INTERN ID: CITS6126
 # Expense Tracker Dashboard
 
 Expense Tracker  is a premium personal finance tracking application. It runs completely client-side in the browser, storing all data securely in local storage.
